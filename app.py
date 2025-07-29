@@ -12,7 +12,7 @@ from firebase_admin import credentials, db
 
 # Initialize Firebase only once
 if not firebase_admin._apps:
-    cred = credentials.Certificate("D:\\Udhar_System\\udhar-system-be29b-firebase-adminsdk-fbsvc-0768802c39.json")
+    cred = credentials.Certificate("udhar-system-be29b-firebase-adminsdk-fbsvc-0768802c39.json")
     firebase_admin.initialize_app(cred, {
         'databaseURL': 'https://udhar-system-be29b-default-rtdb.firebaseio.com/'
     })
@@ -51,7 +51,6 @@ def get_customer_udhaar(name):
         'paid_total': paid_total
     }
 
-import speech_recognition as sr
 
 def get_voice_text(timeout=6, lang='hi-IN'):
     r = sr.Recognizer()
@@ -67,17 +66,14 @@ def extract_info(text):
     now = datetime.now()
     words = t.split()
 
-
     name = ""
     if "ने" in words:
         ne_index = words.index("ने")
         name = " ".join(words[:ne_index])
     name = " ".join(w.capitalize() for w in name.split())
 
-
     amount_match = re.search(r"\b(\d{1,5})\b", t)
     amount = int(amount_match.group(1)) if amount_match else 0
-
 
     item = ""
     if "वापस" in t or "दिया" in t or "दीया" in t or "दिए" in t:
@@ -106,7 +102,6 @@ def extract_info(text):
 
 
 
-
 # Streamlit GUI
 st.set_page_config(page_title="📒 SmartKhata", layout="centered")
 st.title("🗣️ SmartKhata System")
@@ -121,16 +116,7 @@ if st.button("🎙️ बोलकर एंट्री करें"):
             st.success("📢 आपने कहा:")
         except Exception as e:
             st.error(f"❌ स्पीच समझ नहीं आया: {e}")
-        # r = sr.Recognizer()
-        # with sr.Microphone() as source:
-        #     audio = r.listen(source, timeout=6)
-        # try:
-        #     text = r.recognize_google(audio, language='hi-IN')
-        #     extracted = extract_info(text)
-        #     st.session_state["extracted_data"] = extracted  # Save in session state
-        #     st.success("📢 आपने कहा:")
-        # except Exception as e:
-        #     st.error(f"❌ स्पीच समझ नहीं आया: {e}")
+        
 
 # Show extracted data if exists
 if "extracted_data" in st.session_state:
@@ -163,6 +149,7 @@ if st.button("🔎 खोजें") and search_name.strip():
 
         st.markdown(f"### 💼 वर्तमान बकाया: ₹{result['net_balance']}")
 
+# Manual Entry Logic..
 st.markdown("---")
 st.subheader("✍️ मैन्युअल एंट्री")
 with st.form("manual_form"):
