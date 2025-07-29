@@ -24,6 +24,7 @@ Python	                           Core logic and backend
 🤝 Future Improvements
 > Power BI or dashboard integration for visualizing Udhaar patterns
 > SMS reminders for outstanding debts
+> Summarize Udhaar Trends (GenAI)
 
 🙌 Acknowledgement
 > Thanks to the daily shopkeeping experience that inspired the problem, and Google’s Speech API and Firebase for making voice-enabled tech accessible to local businesses.
