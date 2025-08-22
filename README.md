@@ -1,30 +1,72 @@
-🧾 Smart Khata – Voice-Based Udhaar Management System
->> A real-life inspired debt (Udhaar) management system designed to simplify daily shopkeeping operations. Built for small shopkeepers and local businesses, this app allows voice and text-based entries, storing and retrieving customer Udhaar data in real-time using Firebase.
+🧾 Smart Khata – Voice & AI-Powered Udhaar Management System
 
-🚀 Features :-
-🎙️ Voice Input: Record Udhaar details using Google Speech Recognition (Hindi-supported).
+Smart Khata is an intelligent Udhaar (debt) management system designed to simplify daily shopkeeping operations. It allows voice and text-based entries and provides real-time retrieval and visualization of customer debts using Firebase and AI-powered prompt-tuned extraction.
 
-📝 Manual Entry Option: Easily add entries via a form if voice fails.
+🚀 Key Features
+🎙️ Voice Input with AI Extraction
 
-📂 Firebase Integration: All data is securely stored and synced in Firebase Realtime Database.
+Record Udhaar transactions in Hindi or English.
 
-🔍 Quick Retrieval: Type or speak a customer’s name to instantly see their credit/debt history.
+Uses Google Speech Recognition + Gemini AI prompt-tuning to extract customer_name, item, amount, and transaction type.
 
+Automatically converts spoken sentences like "500 ka chawal liya Ram ne" to structured JSON.
+
+📝 Manual Entry
+
+Add transactions via a form when voice input is not preferred.
+
+Ensures all Udhaar records are captured consistently.
+
+📂 Firebase Integration
+
+Securely stores and syncs real-time data.
+
+Supports both automatic AI-extracted entries and manual entries.
+
+🔍 Quick Retrieval
+
+Search a customer’s name to instantly see credit/debt history.
+
+Displays Udhaar, Paid, and Net Balance details.
+
+📊 Visualization Dashboard
+
+Total Udhaar per Customer (Bar Chart)
+
+Udhaar Over Time (Line Chart)
+
+Helps shopkeepers identify peak Udhaar days, customer trends, and manage credit efficiently.
 
 💡 Real-Life Problem Solved
->> Built after facing a real issue at my own shop, where tracking Udhaar manually often led to forgotten or lost entries. This system ensures that no customer debt is ever missed—even if the shopkeeper is busy, entries can be done by voice in seconds.
+
+Tracking Udhaar manually can lead to forgotten or misplaced entries, especially in busy shops. Smart Khata ensures:
+
+Quick voice-based entry
+
+Automatic AI parsing of transactions
+
+Real-time storage & retrieval
+
+Visual insights for better business decisions
 
 🛠️ Tech Stack
-Technology	                       Purpose
-Streamlit	                         Web UI & deployment
-Google Speech Recognition API	     Convert Hindi voice to text
-Firebase	                         Store & retrieve customer data
-Python	                           Core logic and backend
+Technology	Purpose
+Streamlit	Web UI & Deployment
+Google Speech Recognition API	Convert Hindi/English voice to text
+Gemini AI (Prompt-Tuned)	Extract structured data from text
+Firebase Realtime Database	Store & retrieve customer data
+Python	Core logic, backend, and integration
+Plotly Express	Data visualization for Udhaar trends
+🤝 Future Enhancements
 
-🤝 Future Improvements
-> Power BI or dashboard integration for visualizing Udhaar patterns
-> SMS reminders for outstanding debts
-> Summarize Udhaar Trends (GenAI)
+Dashboard Analytics: Power BI or advanced Plotly insights.
 
-🙌 Acknowledgement
-> Thanks to the daily shopkeeping experience that inspired the problem, and Google’s Speech API and Firebase for making voice-enabled tech accessible to local businesses.
+Automated SMS Reminders: Notify customers of outstanding Udhaar.
+
+Trend Analysis with GenAI: Summarize Udhaar patterns and generate actionable insights.
+
+🙌 Acknowledgements
+
+Inspired by real shopkeeping experience where manual Udhaar tracking caused issues.
+
+Uses Google Speech API, Gemini AI, Firebase, and Streamlit to make voice-enabled Udhaar management accessible for local businesses.
