@@ -1,9 +1,5 @@
 import streamlit as st
-from streamlit_webrtc import webrtc_streamer, AudioProcessorBase
-import av
 import speech_recognition as sr
-import asyncio
-import threading
 from datetime import datetime
 import unicodedata
 import re
@@ -12,7 +8,7 @@ from firebase_admin import credentials, db
 
 # Initialize Firebase only once
 if not firebase_admin._apps:
-    cred = credentials.Certificate("udhar-system-be29b-firebase-adminsdk-fbsvc-0768802c39.json")
+    cred = credentials.Certificate("FIREBASE_JSON_PATH")
     firebase_admin.initialize_app(cred, {
         'databaseURL': 'https://udhar-system-be29b-default-rtdb.firebaseio.com/'
     })
@@ -60,12 +56,12 @@ def get_voice_text(timeout=6, lang='hi-IN'):
     return text
 
 
-# Extract info from speech
+# Extract info from speech (Rule Based)
 def extract_info(text):
     t = text.lower()
     now = datetime.now()
     words = t.split()
-
+    
     name = ""
     if "ने" in words:
         ne_index = words.index("ने")
@@ -85,13 +81,11 @@ def extract_info(text):
         item_match = re.search(r"का\s+(.*?)\s+(उधार|उधर)", t)
         if item_match:
             item = item_match.group(1).strip()
-
     else:
         type = "Nagat"
         item_match = re.search(r"का\s+(.*?)\s+(लिया)", t)
         if item_match:
             item = item_match.group(1).strip()
-
     return {
         'name': name.capitalize(),
         'amount': amount,
@@ -101,34 +95,74 @@ def extract_info(text):
     }
 
 
+import google.generativeai as genai
+import json
+# Configure your API key
+genai.configure(api_key="GEMINI_API_KEY")
+
+# Extract info from speech (Prompt Tunning)
+def extract_udhar_info(text):
+    prompt = f""" Extract the following information from this text and return in JSON only: 
+    - customer_name 
+    - item 
+    - amount (Numeric value only (no words like 'rupees', 'ka', etc.))
+    - type: 
+    * "Udhar" → if the word 'udhar' is present 
+    * "Paid" → if customer is paying an udhar (e.g., "500 chukaya", "500 wapas kiya")
+    * "Nagat" → if no 'udhar' word and it’s a normal transaction
+    Text: {text}
+    """
+    
+    response = genai.GenerativeModel("gemini-1.5-flash").generate_content(prompt)
+
+    # Debug: print raw response
+    print("Raw Response:", response)
+
+    try:
+        # Extract text part
+        result_text = response.candidates[0].content.parts[0].text.strip()
+
+        # Remove ```json ``` wrappers if present
+        if result_text.startswith("```"):
+            result_text = result_text.strip("`").replace("json\n", "").replace("```", "").strip()
+
+        # Convert to dictionary
+        data = json.loads(result_text)
+        data["date"] = datetime.now().strftime("%Y-%m-%d")
+        return data
+    
+    except Exception as e:
+        print("Parsing error:", e)
+        return extract_info(text)
+
+
 
 # Streamlit GUI
 st.set_page_config(page_title="📒 SmartKhata", layout="centered")
 st.title("🗣️ SmartKhata System")
 
 # Voice input and confirmation
-if st.button("🎙️ बोलकर एंट्री करें"):
+if st.button("🎙️ Speak"):
     with st.spinner("कृपया बोलें..."):
         try:
             text = get_voice_text()
-            extracted = extract_info(text)
+            extracted = extract_udhar_info(text)
             st.session_state["extracted_data"] = extracted  # Save in session state
             st.success("📢 आपने कहा:")
         except Exception as e:
             st.error(f"❌ स्पीच समझ नहीं आया: {e}")
         
-
 # Show extracted data if exists
 if "extracted_data" in st.session_state:
     st.json(st.session_state["extracted_data"])
-    if st.button("✅ यह सही है, सेव करें"):
+    if st.button("✅ Save this!!"):
         send_to_firebase(st.session_state["extracted_data"])
         st.success("✅ डेटा सेव हो गया!")
         del st.session_state["extracted_data"]  # Clear after saving
 
 
 st.markdown("---")
-st.subheader("🔍 ग्राहक का रिकॉर्ड खोजें")
+st.subheader("🔍 Find Customer Record ")
 search_name = st.text_input("ग्राहक का नाम टाइप करें:")
 if st.button("🔎 खोजें") and search_name.strip():
     result = get_customer_udhaar(search_name.strip())
@@ -149,24 +183,80 @@ if st.button("🔎 खोजें") and search_name.strip():
 
         st.markdown(f"### 💼 वर्तमान बकाया: ₹{result['net_balance']}")
 
-# Manual Entry Logic..
 st.markdown("---")
-st.subheader("✍️ मैन्युअल एंट्री")
+st.subheader("✍️ Manual Entry")
 with st.form("manual_form"):
-    name = st.text_input("नाम")
-    amount = st.number_input("राशि (₹)", min_value=1, step=1)
-    item = st.text_input("आइटम")
-    type = st.selectbox("टाइप", ["Udhar", "Paid", "Nagat"])
-    date = st.date_input("तारीख", value=datetime.today())
-    submit_btn = st.form_submit_button("सेव करें")
+    name = st.text_input("Name")
+    amount = st.number_input("Amount (₹)", min_value=1, step=1)
+    item = st.text_input("Item")
+    type = st.selectbox("Type", ["Udhar", "Paid", "Nagat"])
+    date = st.date_input("Date", value=datetime.today())
+    submit_btn = st.form_submit_button("Save this!!")
 
     if submit_btn:
         manual_data = {
-            "name": name,
-            "amount": amount,
+            "customer_name": name,
             "item": item,
+            "amount": amount,
             "type": type,
-            "date": date.strftime("%Y-%m-%d %H:%M:%S")
+            "date": date.strftime("%Y-%m-%d")
         }
         send_to_firebase(manual_data)
-        st.success("✅ मैन्युअल डेटा सेव हो गया!")
+        st.success("✅ Manual Data is Saved")
+
+
+# VISUALIZATION
+
+import pandas as pd
+import plotly.express as px
+
+# --- Fetch all data for visualization ---
+def fetch_all_transactions():
+    ref = db.reference("transactions")
+    all_data = ref.get()
+    if not all_data:
+        return pd.DataFrame()
+    df = pd.DataFrame(all_data.values())
+    
+    # Normalize columns
+    if "amount" in df.columns:
+        df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0).astype(int)
+    if "date" in df.columns:
+        df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    if "customer_name" not in df.columns and "name" in df.columns:
+        df["customer_name"] = df["name"]  # sometimes your data uses 'name'
+    
+    return df
+
+
+st.markdown("---")
+st.subheader("📊 Udhaar Visualization Dashboard")
+
+if st.button("📊 Show Bar Chart: Total Udhaar per Customer"):
+    df = fetch_all_transactions()
+    if df.empty:
+        st.warning("⚠️ अभी तक कोई डेटा सेव नहीं हुआ।")
+    else:
+        # Group by customer
+        df_grouped = df[df["type"] == "Udhar"].groupby("customer_name")["amount"].sum().reset_index()
+        fig = px.bar(df_grouped,
+                     x="customer_name", y="amount",
+                     text="amount",
+                     title="💰 Total Udhaar Amount per Customer",
+                     labels={"customer_name": "Customer Name", "amount": "Udhar Amount"})
+        fig.update_traces(marker_color="indianred", textposition="outside")
+        st.plotly_chart(fig, use_container_width=True)
+
+if st.button("📈 Show Line Chart: Udhaar Over Time"):
+    df = fetch_all_transactions()
+    if df.empty:
+        st.warning("⚠️ अभी तक कोई डेटा सेव नहीं हुआ।")
+    else:
+        df_grouped = df[df["type"] == "Udhar"].groupby("date")["amount"].sum().reset_index()
+        fig = px.line(df_grouped,
+                      x="date", y="amount",
+                      markers=True,
+                      title="📆 Udhaar Over Time",
+                      labels={"date": "Date", "amount": "Total Udhar"})
+        fig.update_traces(line=dict(color="green", width=3))
+        st.plotly_chart(fig, use_container_width=True)
