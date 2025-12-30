@@ -5,10 +5,18 @@ import unicodedata
 import re
 import firebase_admin
 from firebase_admin import credentials, db
+from dotenv import load_dotenv
+import os
+
+
+load_dotenv()
+Api_key = os.getenv("GROQ_API_KEY")
+database_key = os.getenv("FIREBASE_JSON_PATH")
+
 
 # Initialize Firebase only once
 if not firebase_admin._apps:
-    cred = credentials.Certificate("FIREBASE_JSON_PATH")
+    cred = credentials.Certificate(database_key)
     firebase_admin.initialize_app(cred, {
         'databaseURL': 'https://udhar-system-be29b-default-rtdb.firebaseio.com/'
     })
@@ -19,7 +27,9 @@ def send_to_firebase(data):
     ref.push(data)
 
 def get_customer_udhaar(name):
-    name = unicodedata.normalize('NFC', name.strip())
+    # Normalize & standardize search name
+    search_name = unicodedata.normalize('NFC', name.strip()).lower()
+
     ref = db.reference('transactions')
     all_data = ref.get()
 
@@ -30,14 +40,20 @@ def get_customer_udhaar(name):
 
     if all_data:
         for key, record in all_data.items():
-            rec_name = unicodedata.normalize('NFC', record.get('name', '').strip())
-            if rec_name == name:
+
+            raw_name = record.get('customer_name') or record.get('name', '')
+            rec_name = unicodedata.normalize('NFC', raw_name.strip()).lower()
+
+            if rec_name == search_name:
+                amount = int(record.get('amount', 0))
+
                 if record.get('type') == 'Udhar':
                     udhar_records.append(record)
-                    udhar_total += int(record.get('amount', 0))
+                    udhar_total += amount
+
                 elif record.get('type') == 'Paid':
                     paid_records.append(record)
-                    paid_total += int(record.get('amount', 0))
+                    paid_total += amount
 
     return {
         'udhar_records': udhar_records,
@@ -46,6 +62,7 @@ def get_customer_udhaar(name):
         'udhar_total': udhar_total,
         'paid_total': paid_total
     }
+
 
 
 def get_voice_text(timeout=6, lang='hi-IN'):
@@ -94,47 +111,53 @@ def extract_info(text):
         'date': now.strftime("%Y-%m-%d %H:%M:%S")
     }
 
-
-import google.generativeai as genai
+from groq import Groq
 import json
-# Configure your API key
-genai.configure(api_key="GEMINI_API_KEY")
 
-# Extract info from speech (Prompt Tunning)
+# Initialize Groq Client
+groq_client = Groq(
+    api_key=Api_key
+)
+
+# Extract info from speech (Groq LLM)
 def extract_udhar_info(text):
-    prompt = f""" Extract the following information from this text and return in JSON only: 
-    - customer_name 
-    - item 
-    - amount (Numeric value only (no words like 'rupees', 'ka', etc.))
-    - type: 
-    * "Udhar" → if the word 'udhar' is present 
-    * "Paid" → if customer is paying an udhar (e.g., "500 chukaya", "500 wapas kiya")
-    * "Nagat" → if no 'udhar' word and it’s a normal transaction
-    Text: {text}
-    """
-    
-    response = genai.GenerativeModel("gemini-1.5-flash").generate_content(prompt)
+    prompt = f"""
+Extract the following information from this text and return JSON ONLY:
 
-    # Debug: print raw response
-    print("Raw Response:", response)
+Fields:
+- customer_name
+- item
+- amount (numeric value only, no words)
+- type:
+  - "Udhar" → if 'udhar' word present
+  - "Paid" → if payment done (500 chukaya / wapas)
+  - "Nagat" → normal transaction
+
+Text: "{text}"
+"""
+
+    response = groq_client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0
+    )
+
+    raw_text = response.choices[0].message.content.strip()
+    print("Raw Response:", raw_text)
 
     try:
-        # Extract text part
-        result_text = response.candidates[0].content.parts[0].text.strip()
+        if raw_text.startswith("```"):
+            raw_text = raw_text.replace("```json", "").replace("```", "").strip()
 
-        # Remove ```json ``` wrappers if present
-        if result_text.startswith("```"):
-            result_text = result_text.strip("`").replace("json\n", "").replace("```", "").strip()
-
-        # Convert to dictionary
-        data = json.loads(result_text)
-        data["date"] = datetime.now().strftime("%Y-%m-%d")
+        data = json.loads(raw_text)
+        data["date"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         return data
-    
-    except Exception as e:
-        print("Parsing error:", e)
-        return extract_info(text)
 
+    except Exception as e:
+        print("Groq Parsing Error:", e)
+        return extract_info(text)
 
 
 # Streamlit GUI
@@ -260,3 +283,4 @@ if st.button("📈 Show Line Chart: Udhaar Over Time"):
                       labels={"date": "Date", "amount": "Total Udhar"})
         fig.update_traces(line=dict(color="green", width=3))
         st.plotly_chart(fig, use_container_width=True)
+
