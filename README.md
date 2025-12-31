@@ -1,6 +1,8 @@
 # 🧾 Smart Khata – Voice & AI-Powered Udhaar Management System
 
 Smart Khata is an intelligent Udhaar (debt) management system designed to simplify daily shopkeeping operations. It allows voice and text-based entries and provides real-time retrieval and visualization of customer debts using Firebase and AI-powered prompt-tuned extraction.
+This project is built using **Object-Oriented Programming (OOPS)** principles and **Object-Oriented Analysis & Design (OOAD)** concepts to ensure clean architecture, scalability, and maintainability.
+
 
 ---
 
