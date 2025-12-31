@@ -4,3 +4,6 @@
 # Ignore Firebase service account JSON
 *.json
 
+# Python cache
+__pycache__/
+*.pyc
