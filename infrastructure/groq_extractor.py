@@ -24,8 +24,9 @@ class GroqExtractor:
         - type (Udhar / Paid / Nagat)
         
         Rules:
-        - "Paid" if words like 'chukaya', 'wapas', 'diya' exist.
+        - "Paid" if customer has paid back money (words like 'chukaya', 'wapas' ).
         - "Udhar" if 'udhar' exists.
+        - "Nagat" if neither of above conditions are met, just normal purchase.
         
         Text: "{text}"
         """
