@@ -4,7 +4,7 @@
 
 A production-deployed debt-tracking system for small shopkeepers who manage Udhaar (credit) verbally in Hindi/English. Replaces paper-based ledgers with real-time, voice-driven data entry backed by LLM extraction and Firebase persistence.
 
-<!-- SCREENSHOT: Add a full-page screenshot of the main UI here -->
+![SmartKhata UI](assets/ui.jpeg)
 
 ---
 
