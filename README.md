@@ -185,6 +185,7 @@ Voice-transcribed Hindi names can have different Unicode representations of the 
 | Analytics | Plotly bar (sum by customer) + line chart (daily aggregated, not per-timestamp) |
 | Bilingual STT | `hi-IN` first, falls back to `en-IN` on `UnknownValueError` |
 | LLM fallback | Regex + Hindi keyword parser fires automatically, transparent to user |
+| PDF export | Per-customer A4 statement — KPI summary, itemised Udhar/Paid tables, downloadable via `st.download_button` |
 
 ---
 
@@ -254,7 +255,6 @@ A production multi-shop version would require authentication, per-shop data isol
 - [ ] Fuzzy name matching — treat "Ram" / "Raam" / "राम" as the same customer
 - [ ] STT confidence threshold — reject low-confidence transcriptions before LLM call
 - [ ] WhatsApp notification when customer balance crosses a threshold
-- [ ] Monthly PDF ledger export per customer
 - [ ] Multi-shop support with authentication
 - [ ] Offline-first mode with background sync on reconnect
 
