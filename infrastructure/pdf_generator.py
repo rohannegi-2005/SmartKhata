@@ -22,8 +22,6 @@ def _register_fonts():
       2. FreeSans (ships with Ubuntu/Debian — used on Streamlit Cloud)
       3. Fallback to Helvetica (English only — black boxes for Hindi)
     """
-    registered = []
-
     # Option 1: Noto Sans Devanagari bundled in project assets/
     base_dir   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     noto_reg   = os.path.join(base_dir, "assets", "NotoSans-Regular.ttf")

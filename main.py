@@ -2,42 +2,46 @@ import streamlit as st
 import os
 import plotly.express as px
 import io
+import speech_recognition as sr          # moved to top — fixes scoping bug on line 83
+from pydub import AudioSegment           # moved to top — consistent with other imports
 
 from infrastructure.groq_extractor import GroqExtractor
 from infrastructure.firebase_repo import FirebaseRepository
+from infrastructure.pdf_generator import generate_ledger_pdf  # moved to top
 from services.transaction_service import TransactionService
 from domain.transaction import Transaction
 
-# ─────────────────────────────────────────────
-# Config — Streamlit Cloud uses st.secrets,
-# local dev falls back to .env + JSON file
-# ─────────────────────────────────────────────
+
+# ── Config ────────────────────────────────────────────────────────────────────
 def get_config():
     try:
-        api_key = st.secrets["GROQ_API_KEY"]
+        api_key        = st.secrets["GROQ_API_KEY"]
         firebase_creds = dict(st.secrets["firebase"])
         return api_key, firebase_creds
     except Exception:
         from dotenv import load_dotenv
         load_dotenv()
-        api_key = os.getenv("GROQ_API_KEY")
+        api_key        = os.getenv("GROQ_API_KEY")
         firebase_creds = os.getenv("FIREBASE_JSON_PATH")
+        if not api_key:
+            st.error("GROQ_API_KEY not found in secrets or .env — app cannot start.")
+            st.stop()
         return api_key, firebase_creds
 
 API_KEY, DB_CREDS = get_config()
 DB_URL = "https://udhar-system-be29b-default-rtdb.firebaseio.com/"
 
-extractor        = GroqExtractor(API_KEY)
-repo             = FirebaseRepository(DB_CREDS, DB_URL)
-transaction_svc  = TransactionService(repo)
+extractor       = GroqExtractor(API_KEY)
+repo            = FirebaseRepository(DB_CREDS, DB_URL)
+transaction_svc = TransactionService(repo)
 
-# ─────────────────────────────────────────────
-# Page
-# ─────────────────────────────────────────────
+
+# ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(page_title="SmartKhata Pro", layout="centered")
 st.title("SmartKhata System")
 
-# ── 1. Voice Entry ────────────────────────────
+
+# ── 1. Voice Entry ────────────────────────────────────────────────────────────
 st.subheader("Voice Entry")
 st.info("Allow mic access → Click mic → Speak → Click Stop")
 
@@ -46,13 +50,10 @@ audio_input = st.audio_input("Record Udhaar transaction (Hindi or English)")
 if audio_input is not None:
     with st.spinner("Processing voice..."):
         try:
-            import speech_recognition as sr
-            from pydub import AudioSegment
-
             # Convert browser audio (WebM/OGG) → WAV
-            raw = io.BytesIO(audio_input.read())
+            raw     = io.BytesIO(audio_input.read())
             segment = AudioSegment.from_file(raw)
-            wav_io = io.BytesIO()
+            wav_io  = io.BytesIO()
             segment.export(wav_io, format="wav")
             wav_io.seek(0)
 
@@ -60,7 +61,7 @@ if audio_input is not None:
             with sr.AudioFile(wav_io) as source:
                 audio_data = recognizer.record(source)
 
-            # Try Hindi, fallback to English
+            # Try Hindi first, fallback to English
             try:
                 text = recognizer.recognize_google(audio_data, language="hi-IN")
             except sr.UnknownValueError:
@@ -68,9 +69,9 @@ if audio_input is not None:
 
             st.success(f"Recognized: **{text}**")
 
-            # extractor.extract() returns a DICT — wrap into Transaction object
+            # extractor.extract() returns a dict — wrap into Transaction object
             data = extractor.extract(text)
-            txn = Transaction(
+            txn  = Transaction(
                 customer_name = data.get("customer_name", "Unknown"),
                 amount        = data.get("amount", 0),
                 item          = data.get("item", ""),
@@ -95,7 +96,8 @@ if "pending_txn" in st.session_state:
 
 st.markdown("---")
 
-# ── 2. Search ─────────────────────────────────
+
+# ── 2. Search ─────────────────────────────────────────────────────────────────
 st.subheader("Find Customer Record")
 search_name = st.text_input("Enter Customer Name:")
 if st.button("Search") and search_name:
@@ -108,16 +110,14 @@ if st.button("Search") and search_name:
         with c1:
             st.error(f"Total Udhar: Rs.{result['udhar_total']}")
             for r in result["udhar_records"]:
-                st.write(f"- Rs.{r['amount']} ({r.get('item','')})")
+                st.write(f"- Rs.{r['amount']} ({r.get('item', '')})")
         with c2:
             st.success(f"Total Paid: Rs.{result['paid_total']}")
             for r in result["paid_records"]:
-                st.write(f"- Rs.{r['amount']} ({r.get('item','')})")
+                st.write(f"- Rs.{r['amount']} ({r.get('item', '')})")
 
-        # ── PDF Export ────────────────────────────────
         st.markdown("---")
         try:
-            from infrastructure.pdf_generator import generate_ledger_pdf
             pdf_bytes = generate_ledger_pdf(search_name, result)
             st.download_button(
                 label="Download PDF Statement",
@@ -131,7 +131,8 @@ if st.button("Search") and search_name:
 
 st.markdown("---")
 
-# ── 3. Manual Entry ───────────────────────────
+
+# ── 3. Manual Entry ───────────────────────────────────────────────────────────
 st.subheader("Manual Entry")
 with st.form("manual_form"):
     name   = st.text_input("Customer Name")
@@ -147,14 +148,14 @@ with st.form("manual_form"):
 
 st.markdown("---")
 
-# ── 4. Analytics ──────────────────────────────
+
+# ── 4. Analytics ──────────────────────────────────────────────────────────────
 st.subheader("Analytics Dashboard")
 if st.button("Show Charts"):
     df = transaction_svc.get_analytics_dataframe()
     if not df.empty and "type" in df.columns:
         udhar_df = df[df["type"] == "Udhar"].copy()
         if not udhar_df.empty:
-            # Bar chart
             bar = udhar_df.groupby("customer_name")["amount"].sum().reset_index()
             st.plotly_chart(
                 px.bar(bar, x="customer_name", y="amount",
@@ -162,7 +163,6 @@ if st.button("Show Charts"):
                        color="amount", color_continuous_scale="reds"),
                 use_container_width=True
             )
-            # Line chart — group by date only (not full timestamp)
             if "date" in udhar_df.columns:
                 udhar_df["day"] = udhar_df["date"].dt.date
                 line = udhar_df.groupby("day")["amount"].sum().reset_index()
