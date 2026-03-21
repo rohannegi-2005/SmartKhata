@@ -114,6 +114,21 @@ if st.button("Search") and search_name:
             for r in result["paid_records"]:
                 st.write(f"- Rs.{r['amount']} ({r.get('item','')})")
 
+        # ── PDF Export ────────────────────────────────
+        st.markdown("---")
+        try:
+            from infrastructure.pdf_generator import generate_ledger_pdf
+            pdf_bytes = generate_ledger_pdf(search_name, result)
+            st.download_button(
+                label="Download PDF Statement",
+                data=pdf_bytes,
+                file_name=f"SmartKhata_{search_name.replace(' ', '_')}.pdf",
+                mime="application/pdf",
+                help="Download a clean PDF statement for this customer"
+            )
+        except Exception as e:
+            st.warning(f"PDF export unavailable: {e}")
+
 st.markdown("---")
 
 # ── 3. Manual Entry ───────────────────────────

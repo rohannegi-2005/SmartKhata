@@ -6,3 +6,4 @@ plotly
 SpeechRecognition
 groq
 pydub
+reportlab
