@@ -182,7 +182,7 @@ Voice-transcribed Hindi names can have different Unicode representations of the 
 | Voice entry | Browser mic → WebM → WAV → Google STT → Groq LLM → `Transaction` object |
 | Manual entry | Form-based, same `Transaction` schema, same save path as voice |
 | Customer ledger | NFC-normalised name search, splits Udhar / Paid, calculates net balance |
-| Analytics | Plotly bar (sum by customer) + line chart (daily aggregated, not per-timestamp) |
+| Analytics dashboard | Date-filtered metrics (Udhar, Paid, Net, active customers), top-5 debtor bar chart, daily Udhar trend line, transaction volume — all via `st.tabs` + `st.metric` |
 | Bilingual STT | `hi-IN` first, falls back to `en-IN` on `UnknownValueError` |
 | LLM fallback | Regex + Hindi keyword parser fires automatically, transparent to user |
 | PDF export | Per-customer A4 statement — KPI summary, itemised Udhar/Paid tables, downloadable via `st.download_button` |
